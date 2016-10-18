@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "683752865456",
+    "project_id": "flock-1628d"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:683752865456:android:6a71337d01ce95de",
+        "android_client_info": {
+          "package_name": "com.yberg.android.life"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "683752865456-paebm0fbvpk3078fllti517f0nj1sgsv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yberg.android.life",
+            "certificate_hash": "6DD06D46F053DC8D02E2EAB996CA3EC7B8327EFE"
+          }
+        },
+        {
+          "client_id": "683752865456-nh4hjdb9e73n9npo1pj1e0mrqu20uemj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqydKptxJcRSC4QTAwkgZAEVEw-c7VG_s"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
