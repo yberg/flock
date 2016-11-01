@@ -22,6 +22,7 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.util.MonthDisplayHelper;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.Menu;
@@ -74,14 +75,10 @@ import io.socket.client.IO;
 import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
 
-/**
- * TODO: set user location on auth
- * TODO: update member class on location update
- */
-
 public class MapActivity extends AppCompatActivity implements
         OnMapReadyCallback,
         GoogleMap.OnMapClickListener,
+        GoogleMap.OnMapLongClickListener,
         GoogleMap.OnMarkerClickListener,
         LocationListener,
         GoogleApiClient.ConnectionCallbacks,
@@ -110,6 +107,8 @@ public class MapActivity extends AppCompatActivity implements
     private LocationRequest mLocationRequest;
     private Location mCurrentLocation;
     private String mLastUpdateTime;
+    private double mDistance;
+    private String mLocationString;
 
     private List<Favorite> mFavorites = new ArrayList<>();
     private List<Favorite> mOldFavorites;
@@ -118,12 +117,13 @@ public class MapActivity extends AppCompatActivity implements
     private Member mMe;
     private MapLocation mMarked;
 
-    private RelativeLayout root;
+    private RelativeLayout mRoot;
     private SlidingUpPanelLayout mSlidingPanel;
-    private TextView label, address, time;
-    private ImageView labelImage;
-    private SubMenu familyMenu;
-    private SharedPreferences prefs;
+    private TextView mLabel, mAddress, mTime;
+    private ImageView mLabelImage;
+    private SubMenu mFamilyMenu;
+    private SharedPreferences mPrefs;
+    private TextView mInfo;
 
     private Socket mSocket;
     private RequestQueue requestQueue;
@@ -137,10 +137,10 @@ public class MapActivity extends AppCompatActivity implements
         getSupportActionBar().setTitle("");
 
         // Get user id and name
-        prefs = getSharedPreferences("com.yberg.android.life", Context.MODE_PRIVATE);
-        String _id = prefs.getString("_id", "");
-        String name = prefs.getString("name", "");
-        String familyId = prefs.getString("familyId", "");
+        mPrefs = getSharedPreferences("com.yberg.android.life", Context.MODE_PRIVATE);
+        String _id = mPrefs.getString("_id", "");
+        String name = mPrefs.getString("name", "");
+        String familyId = mPrefs.getString("familyId", "");
         if (!_id.equals("") && !name.equals("")) {
             mMe = new Member(name, _id, familyId);
         }
@@ -162,12 +162,13 @@ public class MapActivity extends AppCompatActivity implements
         navigationView.setNavigationItemSelectedListener(this);
 
         // Get the mFamily submenu
-        familyMenu = navigationView.getMenu().getItem(0).getSubMenu();
+        mFamilyMenu = navigationView.getMenu().getItem(0).getSubMenu();
 
         // Request permissions
         requestPermissions();
 
-        root = (RelativeLayout) findViewById(R.id.root);
+        mRoot = (RelativeLayout) findViewById(R.id.root);
+        mInfo = (TextView) findViewById(R.id.info);
 
         // Initialize sliding panel
         mSlidingPanel = (SlidingUpPanelLayout) findViewById(R.id.sliding_layout);
@@ -175,13 +176,13 @@ public class MapActivity extends AppCompatActivity implements
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
-        mSlidingPanel.setParallaxOffset((int) (size.y / 2 - dpToPixels(68, root)));
+        mSlidingPanel.setParallaxOffset((int) (size.y / 2 - dpToPixels(68, mRoot)));
         mSlidingPanel.setAnchorPoint(0.5f);
 
-        label = (TextView) mSlidingPanel.findViewById(R.id.label);
-        labelImage = (ImageView) findViewById(R.id.label_image);
-        time = (TextView) findViewById(R.id.time);
-        address = (TextView) mSlidingPanel.findViewById(R.id.address);
+        mLabel = (TextView) mSlidingPanel.findViewById(R.id.label);
+        mLabelImage = (ImageView) findViewById(R.id.label_image);
+        mTime = (TextView) findViewById(R.id.time);
+        mAddress = (TextView) mSlidingPanel.findViewById(R.id.address);
 
         // Volley setup
         requestQueue = Volley.newRequestQueue(this);
@@ -274,6 +275,7 @@ public class MapActivity extends AppCompatActivity implements
         // Set listeners for map & marker click.
         mMap.setOnMarkerClickListener(this);
         mMap.setOnMapClickListener(this);
+        mMap.setOnMapLongClickListener(this);
     }
 
     @Override
@@ -282,6 +284,13 @@ public class MapActivity extends AppCompatActivity implements
         mSlidingPanel.setPanelState(PanelState.HIDDEN);
         getSupportActionBar().setTitle("");
         resetMarkerColors();
+    }
+
+    @Override
+    public void onMapLongClick(LatLng latLng) {
+        Log.d(TAG, "Long click on " + latLng);
+        FavoriteDialog dialog = new FavoriteDialog();
+        dialog.show(getFragmentManager(), "Test");
     }
 
     @Override
@@ -294,16 +303,34 @@ public class MapActivity extends AppCompatActivity implements
         Tag tag = ((Tag) marker.getTag());
         mMarked = tag.getAssociated();
 
-        // Send an update request to the marked user
-        if (mMarked.getType() == MapLocation.MEMBER && !mMarked.getId().equals(mMe.getId())) {
-            JSONObject json = new JSONObject();
-            try {
-                json.put("src", mMe.getId());
-                json.put("dest", mMarked.getId());
-            } catch (JSONException e) {
-                e.printStackTrace();
+        mLocationString = null;
+
+        // If marker is a family member
+        if (mMarked.getType() == MapLocation.MEMBER) {
+            // Send an update request to the marked user
+            if (!mMarked.getId().equals(mMe.getId())) {
+                JSONObject json = new JSONObject();
+                try {
+                    json.put("src", mMe.getId());
+                    json.put("dest", mMarked.getId());
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                mSocket.emit("requestOne", json);
             }
-            mSocket.emit("requestOne", json);
+
+            // TODO: put in function? Then update panel when receive update from server.
+            // Get distance from marker to nearest favorite
+            mDistance = Float.MAX_VALUE;
+            for (Favorite favorite : mFavorites) {
+                LatLng favPos = favorite.getMarker().getPosition();
+                LatLng markerPos = marker.getPosition();
+                double distance = calculateDistance(favPos.latitude, favPos.longitude, markerPos.latitude, markerPos.longitude);
+                if (distance < mDistance && distance < 15.0) {
+                    mDistance = distance;
+                    mLocationString = favorite.getName();
+                }
+            }
         }
 
         updateUI();
@@ -440,7 +467,7 @@ public class MapActivity extends AppCompatActivity implements
 
                 break;
             case R.id.nav_sign_out:
-                SharedPreferences.Editor editor = prefs.edit();
+                SharedPreferences.Editor editor = mPrefs.edit();
                 editor.putBoolean("authenticated", false).apply();
                 startActivity(new Intent(this, LoginActivity.class));
                 finish();
@@ -475,7 +502,7 @@ public class MapActivity extends AppCompatActivity implements
     }
 
     /**
-     * Emit user location without a specific destination address.
+     * Emit user location without a specific destination mAddress.
      */
     public void emitUserLocation() {
         emitUserLocation(null);
@@ -524,42 +551,48 @@ public class MapActivity extends AppCompatActivity implements
         // Edit toolbar title
         getSupportActionBar().setTitle(mMarked.getName());
 
-        // Set panel label
-        label.setText(mMarked.getName());
+        // Set panel mLabel
+        mLabel.setText(mMarked.getName());
 
         Tag tag = (Tag) mMarked.getMarker().getTag();
         Marker marker = mMarked.getMarker();
 
         // Update panel
-        labelImage.setImageDrawable(((Tag) marker.getTag()).getAssociated().getIcon(MapActivity.this));
+        mLabelImage.setImageDrawable(((Tag) marker.getTag()).getAssociated().getIcon(MapActivity.this));
         if (tag.getType() == MapLocation.FAVORITE) {
-            labelImage.setColorFilter(ContextCompat.getColor(this, R.color.yellow));
-            time.setText("");
+            mLabelImage.setColorFilter(ContextCompat.getColor(this, R.color.yellow));
+            mTime.setText("");
         } else if (tag.getType() == MapLocation.MEMBER) {
-            labelImage.setColorFilter(ContextCompat.getColor(this, R.color.white));
-            time.setText(((Member) mMarked).getLastUpdated());
+            mLabelImage.setColorFilter(ContextCompat.getColor(this, R.color.white));
+            mTime.setText(((Member) mMarked).getLastUpdated());
         }
 
         // Set marker color
         resetMarkerColors();
         marker.setIcon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
 
-        // Get address from marker location
-        try {
-            Geocoder geo = new Geocoder(MapActivity.this, Locale.getDefault());
-            List<Address> addresses = geo.getFromLocation(marker.getPosition().latitude, marker.getPosition().longitude, 1);
-            if (addresses.size() > 0) {
-                address.setText(addresses.get(0).getThoroughfare() + " " +
-                        addresses.get(0).getFeatureName() + ", " +
-                        addresses.get(0).getLocality());
+        // Set location info
+        if (mLocationString != null) {
+            mAddress.setText("Vid " + mLocationString);
+        }
+        else {
+            // Get address from location
+            try {
+                Geocoder geo = new Geocoder(MapActivity.this, Locale.getDefault());
+                List<Address> addresses = geo.getFromLocation(marker.getPosition().latitude, marker.getPosition().longitude, 1);
+                if (addresses.size() > 0) {
+                    mAddress.setText(addresses.get(0).getThoroughfare() + " " +
+                            addresses.get(0).getFeatureName() + ", " +
+                            addresses.get(0).getLocality());
+                }
+                else {
+                    mAddress.setText("Waiting for Location");
+                }
+            } catch (Exception e) {
+                //e.printStackTrace(); // getFromLocation() may sometimes fail
+                Log.d(TAG, "Couldn't get mAddress data from location");
+                mAddress.setText("Ingen adress");
             }
-            else {
-                address.setText("Waiting for Location");
-            }
-        } catch (Exception e) {
-            //e.printStackTrace(); // getFromLocation() may sometimes fail
-            Log.d(TAG, "Couldn't get address data from location");
-            address.setText("Hittade ingen adress");
         }
     }
 
@@ -617,11 +650,11 @@ public class MapActivity extends AppCompatActivity implements
                             }
                         }
                         // Add members to navigation drawer menu
-                        familyMenu.clear();
+                        mFamilyMenu.clear();
                         int i = 0;
-                        familyMenu.add(Menu.NONE, i++, Menu.NONE, mMe.getName()).setIcon(mMe.getIcon(MapActivity.this));
+                        mFamilyMenu.add(Menu.NONE, i++, Menu.NONE, mMe.getName()).setIcon(mMe.getIcon(MapActivity.this));
                         for (Member m : mFamily) {
-                            familyMenu.add(Menu.NONE, i++, Menu.NONE, m.getName()).setIcon(m.getIcon(MapActivity.this));
+                            mFamilyMenu.add(Menu.NONE, i++, Menu.NONE, m.getName()).setIcon(m.getIcon(MapActivity.this));
                         }
                     }
                 } catch (JSONException e) {
@@ -631,7 +664,7 @@ public class MapActivity extends AppCompatActivity implements
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                Snackbar.make(root, "Request timed out", Snackbar.LENGTH_LONG).show();
+                Snackbar.make(mRoot, "Request timed out", Snackbar.LENGTH_LONG).show();
                 //Toast.makeText(MapActivity.this, "Request timed out", Toast.LENGTH_LONG).show();
             }
         }) {
@@ -686,7 +719,7 @@ public class MapActivity extends AppCompatActivity implements
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                Snackbar.make(root, "Request timed out", Snackbar.LENGTH_LONG).show();
+                Snackbar.make(mRoot, "Request timed out", Snackbar.LENGTH_LONG).show();
                 //Toast.makeText(MapActivity.this, "Request timed out", Toast.LENGTH_LONG).show();
             }
         });
@@ -767,7 +800,7 @@ public class MapActivity extends AppCompatActivity implements
                     }
                     Log.d(TAG, "src: " + src);
 
-                    Snackbar.make(root, "updateRequest received", Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(mRoot, "updateRequest received", Snackbar.LENGTH_LONG).show();
                     //Toast.makeText(MapActivity.this, "updateRequest received", Toast.LENGTH_LONG).show();
 
                     // Emit user location
@@ -824,7 +857,7 @@ public class MapActivity extends AppCompatActivity implements
                     }
                     Log.d(TAG, "error: " + error);
 
-                    Snackbar.make(root, "error: " + error, Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(mRoot, "error: " + error, Snackbar.LENGTH_LONG).show();
                     //Toast.makeText(MapActivity.this, "error: " + error, Toast.LENGTH_LONG).show();
                 }
             });
@@ -832,7 +865,7 @@ public class MapActivity extends AppCompatActivity implements
     };
 
     /**
-     * Requests permissions from the user at run-time.
+     * Requests permissions from the user at run-mTime.
      */
     public void requestPermissions() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
@@ -888,6 +921,25 @@ public class MapActivity extends AppCompatActivity implements
      */
     public static float dpToPixels(int dp, View view) {
         return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, view.getResources().getDisplayMetrics());
+    }
+
+    /**
+     * Calculates the distance in meters between two points on the map.
+     * @param lat1
+     * @param lng1
+     * @param lat2
+     * @param lng2
+     * @return The distance in meters
+     */
+    public static double calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+        double earthRadius = 6371000;
+        double dLat = Math.toRadians(lat2-lat1);
+        double dLng = Math.toRadians(lng2-lng1);
+        double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.sin(dLng/2) * Math.sin(dLng/2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        return (float) (earthRadius * c);
     }
 
 }

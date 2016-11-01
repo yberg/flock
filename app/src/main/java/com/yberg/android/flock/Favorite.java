@@ -16,6 +16,8 @@ public class Favorite extends MapLocation {
     private static final float DEFAULT_MARKER_COLOR = BitmapDescriptorFactory.HUE_ORANGE;
     private static int TYPE = MapLocation.FAVORITE;
 
+    private double radius;
+
     public Favorite(String name, String _id, Marker marker) {
         this.name = name;
         this._id = _id;
@@ -23,6 +25,10 @@ public class Favorite extends MapLocation {
         this.marker.setTitle(name);
         this.marker.setIcon(BitmapDescriptorFactory.defaultMarker(DEFAULT_MARKER_COLOR));
         this.marker.setTag(new Tag(TYPE, this));
+    }
+
+    public void setRadius(double radius) {
+        this.radius = radius;
     }
 
     @Override

@@ -41,10 +41,12 @@
         <activity
             android:name="com.yberg.android.flock.MapActivity"
             android:label="@string/title_activity_map"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:theme="@style/AppTheme">
         </activity>
         <activity
-            android:name="com.yberg.android.flock.LoginActivity">
+            android:name="com.yberg.android.flock.LoginActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
