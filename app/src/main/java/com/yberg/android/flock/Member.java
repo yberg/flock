@@ -57,7 +57,7 @@ public class Member extends MapLocation {
         marker.setIcon(BitmapDescriptorFactory.defaultMarker(DEFAULT_MARKER_COLOR));
     }
 
-    public void addMarker(Marker marker) {
+    public void setMarker(Marker marker) {
         this.marker = marker;
         this.marker.setTitle(name);
         this.marker.setIcon(BitmapDescriptorFactory.defaultMarker(DEFAULT_MARKER_COLOR));

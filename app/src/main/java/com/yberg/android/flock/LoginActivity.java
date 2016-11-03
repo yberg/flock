@@ -48,22 +48,16 @@ public class LoginActivity extends AppCompatActivity implements
 
     private static final String TAG = "FLOCK/LoginActivity";
 
-    private static final int LOGIN_METHOD_EMAIL = 0;
-    private static final int LOGIN_METHOD_GOOGLE = 1;
-
-    private static final String LOGIN_URL = "http://192.168.0.105:3000/auth";
+    private static final String LOGIN_URL = MapActivity.BASE_URL + "auth";
     private static final int RC_SIGN_IN = 9001;
 
-    // TODO: hide secretwith ProGuard
-    private String clientId;
+    private RequestQueue mRequestQueue;
 
-    private RequestQueue requestQueue;
-
-    private CoordinatorLayout coordinatorLayout;
-    private ProgressBar spinner;
-    private ImageView check;
-    private EditText email, password;
-    private RelativeLayout loginButton;
+    private CoordinatorLayout mCoordinatorLayout;
+    private ProgressBar mSpinner;
+    private ImageView mCheck;
+    private EditText mEmail, mPassword;
+    private RelativeLayout mLoginButton;
     private GoogleApiClient mGoogleApiClient;
 
     @Override
@@ -71,7 +65,7 @@ public class LoginActivity extends AppCompatActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        SharedPreferences prefs = getSharedPreferences("com.yberg.android.life", Context.MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences("com.yberg.android.flock", Context.MODE_PRIVATE);
         //String storedId = prefs.getString("_id", "");
         //String storedName = prefs.getString("name", "");
         if (prefs.getBoolean("authenticated", false)) {
@@ -81,7 +75,7 @@ public class LoginActivity extends AppCompatActivity implements
 
         // Get strings
         Resources res = getResources();
-        clientId = res.getString(R.string.client_id_string);
+        String clientId = res.getString(R.string.client_id_string);
 
         // Configure sign-in to request the user's ID, email address, and basic
         // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
@@ -97,27 +91,27 @@ public class LoginActivity extends AppCompatActivity implements
                 .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
                 .build();
 
-        requestQueue = Volley.newRequestQueue(this);
+        mRequestQueue = Volley.newRequestQueue(this);
 
-        spinner = (ProgressBar) findViewById(R.id.progressBar);
-        spinner.getIndeterminateDrawable().setColorFilter(
+        mSpinner = (ProgressBar) findViewById(R.id.progressBar);
+        mSpinner.getIndeterminateDrawable().setColorFilter(
                 new LightingColorFilter(0xFF000000, Color.WHITE));
-        spinner.setVisibility(View.INVISIBLE);
+        mSpinner.setVisibility(View.INVISIBLE);
 
-        check = (ImageView) findViewById(R.id.login_ok);
+        mCheck = (ImageView) findViewById(R.id.login_ok);
 
-        coordinatorLayout = (CoordinatorLayout) findViewById(R.id.coordinator_layout);
+        mCoordinatorLayout = (CoordinatorLayout) findViewById(R.id.coordinator_layout);
 
-        email = (EditText) findViewById(R.id.email);
-        email.setText(prefs.getString("email", ""));
-        email.requestFocus();
-        email.selectAll();
+        mEmail = (EditText) findViewById(R.id.email);
+        mEmail.setText(prefs.getString("email", ""));
+        mEmail.requestFocus();
+        mEmail.selectAll();
 
-        password = (EditText) findViewById(R.id.password);
-        password.setOnEditorActionListener(editorActionListener);
+        mPassword = (EditText) findViewById(R.id.password);
+        mPassword.setOnEditorActionListener(editorActionListener);
 
-        loginButton = (RelativeLayout) findViewById(R.id.email_sign_in_button);
-        loginButton.setOnClickListener(this);
+        mLoginButton = (RelativeLayout) findViewById(R.id.email_sign_in_button);
+        mLoginButton.setOnClickListener(this);
 
         SignInButton googleSignInButton = ((SignInButton) findViewById(R.id.google_sign_in_button));
         googleSignInButton.setOnClickListener(this);
@@ -152,19 +146,19 @@ public class LoginActivity extends AppCompatActivity implements
     }
 
     /**
-     * Enables or disables login button clicks and shows or hides a loading spinner.
+     * Enables or disables login button clicks and shows or hides a loading mSpinner.
      * @param enabled enable or disable
      */
     public void setEnabled(boolean enabled) {
         if (enabled) {
-            loginButton.setEnabled(true);
-            loginButton.setBackgroundResource(R.drawable.button);
-            spinner.setVisibility(View.INVISIBLE);
+            mLoginButton.setEnabled(true);
+            mLoginButton.setBackgroundResource(R.drawable.button);
+            mSpinner.setVisibility(View.INVISIBLE);
         }
         else {
-            loginButton.setEnabled(false);
-            loginButton.setBackgroundResource(R.drawable.button_pressed);
-            spinner.setVisibility(View.VISIBLE);
+            mLoginButton.setEnabled(false);
+            mLoginButton.setBackgroundResource(R.drawable.button_pressed);
+            mSpinner.setVisibility(View.VISIBLE);
         }
     }
 
@@ -179,7 +173,7 @@ public class LoginActivity extends AppCompatActivity implements
             // Signed in successfully, show authenticated UI.
             GoogleSignInAccount acct = result.getSignInAccount();
             //mStatusTextView.setText(getString(R.string.signed_in_fmt, acct.getDisplayName()));
-            Log.d(TAG, acct.getDisplayName() + " " + acct.getEmail());
+            Log.d(TAG, acct.getDisplayName() + " " + acct.getEmail() + " " + acct.getIdToken());
             signIn(acct);
             //updateUI(true);
         } else {
@@ -193,7 +187,7 @@ public class LoginActivity extends AppCompatActivity implements
         @Override
         public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
             if (v.getId() == R.id.password)
-                loginButton.performClick();
+                mLoginButton.performClick();
             return false;
         }
     };
@@ -203,7 +197,7 @@ public class LoginActivity extends AppCompatActivity implements
         switch (v.getId()) {
             case R.id.email_sign_in_button:
                 setEnabled(false);
-                signIn(email.getText().toString());
+                signIn(mEmail.getText().toString());
                 break;
 
             case R.id.google_sign_in_button:
@@ -244,11 +238,11 @@ public class LoginActivity extends AppCompatActivity implements
                 try {
                     if (response.getBoolean("success")) {
 
-                        check.setVisibility(View.VISIBLE);
+                        mCheck.setVisibility(View.VISIBLE);
 
                         // Store user information in Shared Preferences
                         SharedPreferences.Editor editor = LoginActivity.this.getSharedPreferences(
-                                "com.yberg.android.life", Context.MODE_PRIVATE
+                                "com.yberg.android.flock", Context.MODE_PRIVATE
                         ).edit();
                         editor.putBoolean("authenticated", true);
                         editor.putString("_id", response.getString("_id"));
@@ -268,8 +262,8 @@ public class LoginActivity extends AppCompatActivity implements
                         startActivity(new Intent(LoginActivity.this, MapActivity.class));
                         finish();
                     } else {
-                        password.setText("");
-                        Snackbar.make(coordinatorLayout, response.getString("message"), Snackbar.LENGTH_LONG).show();
+                        mPassword.setText("");
+                        Snackbar.make(mCoordinatorLayout, response.getString("message"), Snackbar.LENGTH_LONG).show();
                     }
                     setEnabled(true);
                 } catch (JSONException e) {
@@ -282,12 +276,12 @@ public class LoginActivity extends AppCompatActivity implements
                 if (error.networkResponse == null) {
                     if (error.getClass().equals(TimeoutError.class)) {
                         setEnabled(true);
-                        Snackbar.make(coordinatorLayout, "Request timed out",
+                        Snackbar.make(mCoordinatorLayout, "Request timed out",
                                 Snackbar.LENGTH_LONG).show();
                     }
                 }
             }
         });
-        requestQueue.add(loginRequest);
+        mRequestQueue.add(loginRequest);
     }
 }
