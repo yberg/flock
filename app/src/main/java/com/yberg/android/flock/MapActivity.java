@@ -90,7 +90,7 @@ public class MapActivity extends AppCompatActivity implements
 
     private static final String TAG = "FLOCK/MapActivity";
 
-    public static final String BASE_URL = "http://192.168.43.200:3000/";
+    public static final String BASE_URL = "http://192.168.0.105:3001/";
     private static final String USER_URL = BASE_URL + "user/";
     private static final String FAMILY_URL = BASE_URL + "family/";
     private static final String SOCKET_URL = BASE_URL;

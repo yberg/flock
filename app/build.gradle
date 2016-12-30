@@ -18,7 +18,7 @@ android {
 
             Properties properties = new Properties()
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
-            def clientId = properties.getProperty('client.id')
+            def clientId = properties.getProperty('client.id') + ".apps.googleusercontent.com"
             resValue "string", "client_id_string", clientId
             def mapsKey = properties.getProperty('maps.key')
             resValue "string", "google_maps_key_string", mapsKey
@@ -28,7 +28,7 @@ android {
 
             Properties properties = new Properties()
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
-            def clientId = properties.getProperty('client.id')
+            def clientId = properties.getProperty('client.id') + ".apps.googleusercontent.com"
             resValue "string", "client_id_string", clientId
             def mapsKey = properties.getProperty('maps.key')
             resValue "string", "google_maps_key_string", mapsKey
