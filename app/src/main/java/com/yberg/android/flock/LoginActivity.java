@@ -32,8 +32,10 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Scope;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -57,7 +59,7 @@ public class LoginActivity extends AppCompatActivity implements
     private ProgressBar mSpinner;
     private ImageView mCheck;
     private EditText mEmail, mPassword;
-    private RelativeLayout mLoginButton;
+    private RelativeLayout mSignInButton;
     private GoogleApiClient mGoogleApiClient;
 
     @Override
@@ -75,13 +77,15 @@ public class LoginActivity extends AppCompatActivity implements
 
         // Get strings
         Resources res = getResources();
-        String clientId = res.getString(R.string.client_id_string);
+        String clientId = res.getString(R.string.client_id);
 
         // Configure sign-in to request the user's ID, email address, and basic
         // profile. ID and basic profile are included in DEFAULT_SIGN_IN.
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(clientId)
                 .requestEmail()
+                //.requestScopes(new Scope(Scopes.DRIVE_APPFOLDER))
+                //.requestServerAuthCode(clientId, false)
                 .build();
 
         // Build a GoogleApiClient with access to the Google Sign-In API and the
@@ -110,8 +114,8 @@ public class LoginActivity extends AppCompatActivity implements
         mPassword = (EditText) findViewById(R.id.password);
         mPassword.setOnEditorActionListener(editorActionListener);
 
-        mLoginButton = (RelativeLayout) findViewById(R.id.email_sign_in_button);
-        mLoginButton.setOnClickListener(this);
+        mSignInButton = (RelativeLayout) findViewById(R.id.email_sign_in_button);
+        mSignInButton.setOnClickListener(this);
 
         SignInButton googleSignInButton = ((SignInButton) findViewById(R.id.google_sign_in_button));
         googleSignInButton.setOnClickListener(this);
@@ -134,6 +138,11 @@ public class LoginActivity extends AppCompatActivity implements
 
     }
 
+    private void signInWithGoogle() {
+        Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
+        startActivityForResult(signInIntent, RC_SIGN_IN);
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -145,35 +154,13 @@ public class LoginActivity extends AppCompatActivity implements
         }
     }
 
-    /**
-     * Enables or disables login button clicks and shows or hides a loading mSpinner.
-     * @param enabled enable or disable
-     */
-    public void setEnabled(boolean enabled) {
-        if (enabled) {
-            mLoginButton.setEnabled(true);
-            mLoginButton.setBackgroundResource(R.drawable.button);
-            mSpinner.setVisibility(View.INVISIBLE);
-        }
-        else {
-            mLoginButton.setEnabled(false);
-            mLoginButton.setBackgroundResource(R.drawable.button_pressed);
-            mSpinner.setVisibility(View.VISIBLE);
-        }
-    }
-
-    private void signInWithGoogle() {
-        Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
-        startActivityForResult(signInIntent, RC_SIGN_IN);
-    }
-
     private void handleSignInResult(GoogleSignInResult result) {
         Log.d(TAG, "handleSignInResult:" + result.isSuccess());
         if (result.isSuccess()) {
             // Signed in successfully, show authenticated UI.
             GoogleSignInAccount acct = result.getSignInAccount();
             //mStatusTextView.setText(getString(R.string.signed_in_fmt, acct.getDisplayName()));
-            Log.d(TAG, acct.getDisplayName() + " " + acct.getEmail() + " " + acct.getIdToken());
+            Log.d(TAG, acct.getDisplayName() + " " + acct.getEmail());
             signIn(acct);
             //updateUI(true);
         } else {
@@ -182,12 +169,29 @@ public class LoginActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Enables or disables login button clicks and shows or hides a loading mSpinner.
+     * @param enabled enable or disable
+     */
+    public void setEnabled(boolean enabled) {
+        if (enabled) {
+            mSignInButton.setEnabled(true);
+            mSignInButton.setBackgroundResource(R.drawable.button);
+            mSpinner.setVisibility(View.INVISIBLE);
+        }
+        else {
+            mSignInButton.setEnabled(false);
+            mSignInButton.setBackgroundResource(R.drawable.button_pressed);
+            mSpinner.setVisibility(View.VISIBLE);
+        }
+    }
+
     EditText.OnEditorActionListener editorActionListener = new EditText.OnEditorActionListener() {
 
         @Override
         public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
             if (v.getId() == R.id.password)
-                mLoginButton.performClick();
+                mSignInButton.performClick();
             return false;
         }
     };
@@ -221,7 +225,6 @@ public class LoginActivity extends AppCompatActivity implements
         JSONObject body = new JSONObject();
         try {
             body.put("gmail", acct.getEmail());
-            body.put("name", acct.getDisplayName());
             body.put("idToken", acct.getIdToken());
             signIn(body);
         } catch (JSONException e) {
