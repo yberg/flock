@@ -64,6 +64,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.CookieHandler;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -90,10 +93,12 @@ public class MapActivity extends AppCompatActivity implements
 
     private static final String TAG = "FLOCK/MapActivity";
 
-    public static final String BASE_URL = "http://192.168.0.105:3001/";
+    //public static final String BASE_URL = "http://192.168.0.105:3001/api/";
+    public static final String BASE_URL = "https://flock-prod1.herokuapp.com/api/";
     private static final String USER_URL = BASE_URL + "user/";
     private static final String FAMILY_URL = BASE_URL + "family/";
-    private static final String SOCKET_URL = BASE_URL;
+    //private static final String SOCKET_URL = "http://192.168.0.105:3001/";
+    private static final String SOCKET_URL = "https://flock-prod1.herokuapp.com/";
     private static final String DELETE_FAVORITE_URL = BASE_URL + "family/_id/deleteFavorite";
 
     private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
@@ -534,6 +539,7 @@ public class MapActivity extends AppCompatActivity implements
             case R.id.nav_sign_out:
                 SharedPreferences.Editor editor = mPrefs.edit();
                 editor.putBoolean("authenticated", false).apply();
+                editor.putString("session", "");
                 startActivity(new Intent(this, LoginActivity.class));
                 finish();
                 break;
@@ -719,7 +725,7 @@ public class MapActivity extends AppCompatActivity implements
                                 }
                             }
                             // Add new family member
-                            if (!found && !name.equals(mMe.getName())) {
+                            if (!found && !_id.equals(mMe.getId())) {
                                 Marker newMarker = mMap.addMarker(new MarkerOptions().position(location));
                                 Member newMember = new Member(name, _id, familyId, newMarker);
                                 mFamily.add(newMember);
@@ -754,12 +760,14 @@ public class MapActivity extends AppCompatActivity implements
             @Override
             public void onErrorResponse(VolleyError error) {
                 Snackbar.make(mRoot, "Request timed out", Snackbar.LENGTH_LONG).show();
+                error.printStackTrace();
                 //Toast.makeText(MapActivity.this, "Request timed out", Toast.LENGTH_LONG).show();
             }
         }) {
             @Override
             public Map<String, String> getHeaders() throws AuthFailureError {
                 Map<String, String> headers = new HashMap<>();
+                headers.put("Cookie", mPrefs.getString("session", ""));
                 headers.put("_id", mMe.getId());
                 return headers;
             }
@@ -823,7 +831,14 @@ public class MapActivity extends AppCompatActivity implements
                 Snackbar.make(mRoot, "Request timed out", Snackbar.LENGTH_LONG).show();
                 //Toast.makeText(MapActivity.this, "Request timed out", Toast.LENGTH_LONG).show();
             }
-        });
+        }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Cookie", mPrefs.getString("session", ""));
+                return headers;
+            }
+        };
         mRequestQueue.add(favoritesRequest);
     }
 

@@ -104,26 +104,27 @@ public class FavoriteDialog extends DialogFragment {
                     ADD_FAVORITE_URL.replace("_id", mPrefs.getString("familyId", "0")),
                     body,
                     new Response.Listener<JSONObject>() {
-                @Override
-                public void onResponse(JSONObject response) {
-                    Log.d(TAG, "addFavorite response: " + response);
-                    try {
-                        // TODO somehow notify MapActivity to refresh
-                        Snackbar.make(view, response.getString("message"), Snackbar.LENGTH_LONG).show();
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    if (error.networkResponse == null) {
-                        if (error.getClass().equals(TimeoutError.class)) {
-                            Snackbar.make(view, "Request timed out", Snackbar.LENGTH_LONG).show();
+                        @Override
+                        public void onResponse(JSONObject response) {
+                            Log.d(TAG, "addFavorite response: " + response);
+                            try {
+                                // TODO Notify MapActivity to refresh
+                                Snackbar.make(view, response.getString("message"), Snackbar.LENGTH_LONG).show();
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }, new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            if (error.networkResponse == null) {
+                                if (error.getClass().equals(TimeoutError.class)) {
+                                    Snackbar.make(view, "Request timed out", Snackbar.LENGTH_LONG).show();
+                                }
+                            }
                         }
                     }
-                }
-            });
+            );
             mRequestQueue.add(addFavoriteRequest);
         }
     };

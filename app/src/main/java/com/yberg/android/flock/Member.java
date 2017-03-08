@@ -13,6 +13,9 @@ import org.joda.time.DateTime;
  * Created by Viktor on 2016-10-09.
  */
 
+/**
+ * Describes a family member and its marker on the map.
+ */
 public class Member extends MapLocation {
 
     private static final float DEFAULT_MARKER_COLOR = BitmapDescriptorFactory.HUE_RED;
@@ -20,16 +23,32 @@ public class Member extends MapLocation {
 
     private DateTime lastUpdated;
 
+    /**
+     * Constructs an empty member.
+     */
     public Member() {
         this.name = "";
         this._id = "";
         this.familyId = "";
     }
 
+    /**
+     * Constructs a member without a marker.
+     * @param name The member's name
+     * @param _id The member's id
+     * @param familyId The member's family id.
+     */
     public Member(String name, String _id, String familyId) {
         this(name, _id, familyId, null);
     }
 
+    /**
+     * Constructs a member with a marker.
+     * @param name The member's name
+     * @param _id The member's id
+     * @param familyId The member's family id.
+     * @param marker The member's map marker.
+     */
     public Member(String name, String _id, String familyId, Marker marker) {
         this.name = name;
         this._id = _id;
@@ -57,6 +76,10 @@ public class Member extends MapLocation {
         marker.setIcon(BitmapDescriptorFactory.defaultMarker(DEFAULT_MARKER_COLOR));
     }
 
+    /**
+     * Sets the marker.
+     * @param marker The marker.
+     */
     public void setMarker(Marker marker) {
         this.marker = marker;
         this.marker.setTitle(name);
@@ -64,10 +87,17 @@ public class Member extends MapLocation {
         this.marker.setTag(new Tag(TYPE, this));
     }
 
+    /**
+     * Sets the last updated timestamp.
+     * @param lastUpdated The last update timestamp.
+     */
     public void setLastUpdated(DateTime lastUpdated) {
         this.lastUpdated = lastUpdated;
     }
 
+    /**
+     * @return The time when the member's position was last updated.
+     */
     public String getLastUpdated() {
         StringBuilder s = new StringBuilder();
         if (lastUpdated.getHourOfDay() < 10) {

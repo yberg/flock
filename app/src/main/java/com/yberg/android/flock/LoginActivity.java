@@ -20,11 +20,14 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.android.volley.NetworkResponse;
+import com.android.volley.ParseError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.HttpHeaderParser;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.gms.auth.api.Auth;
@@ -39,6 +42,9 @@ import com.google.android.gms.common.api.Scope;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
+import java.util.Map;
 
 /**
  * The login activity.
@@ -201,7 +207,7 @@ public class LoginActivity extends AppCompatActivity implements
         switch (v.getId()) {
             case R.id.email_sign_in_button:
                 setEnabled(false);
-                signIn(mEmail.getText().toString());
+                signIn(mEmail.getText().toString(), mPassword.getText().toString());
                 break;
 
             case R.id.google_sign_in_button:
@@ -211,10 +217,11 @@ public class LoginActivity extends AppCompatActivity implements
         }
     }
 
-    public void signIn(String email) {
+    public void signIn(String email, String password) {
         JSONObject body = new JSONObject();
         try {
             body.put("email", email);
+            body.put("password", password);
             signIn(body);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -284,7 +291,35 @@ public class LoginActivity extends AppCompatActivity implements
                     }
                 }
             }
-        });
+        }) {
+            @Override
+            public Response<JSONObject> parseNetworkResponse(NetworkResponse response) {
+                /*try {
+                    String jsonString = new String(response.data,
+                            HttpHeaderParser.parseCharset(response.headers, PROTOCOL_CHARSET));
+                    JSONObject jsonResponse = new JSONObject(jsonString);
+                    jsonResponse.put("headers", new JSONObject(response.headers));
+                    return Response.success(jsonResponse,
+                            HttpHeaderParser.parseCacheHeaders(response));
+                } catch (UnsupportedEncodingException | JSONException e) {
+                    return Response.error(new ParseError(e));
+                }*/
+                Map<String, String> headers = response.headers;
+                String cookies = headers.get("Set-Cookie");
+                setCookie(cookies, LoginActivity.this);
+                return super.parseNetworkResponse(response);
+            }
+        };
         mRequestQueue.add(loginRequest);
+    }
+
+    public static void setCookie(String cookie, Context context) {
+        // Store user information in Shared Preferences
+        SharedPreferences.Editor editor = context.getSharedPreferences(
+                "com.yberg.android.flock", Context.MODE_PRIVATE
+        ).edit();
+        Log.d(TAG, "Setting cookie " + cookie);
+        editor.putString("session", cookie);
+        editor.apply();
     }
 }
