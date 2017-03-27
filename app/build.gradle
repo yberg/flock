@@ -1,6 +1,17 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        config {
+            Properties properties = new Properties()
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+            def keystorePath = properties.getProperty('keystore.path')
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeFile file(keystorePath)
+            storePassword 'android'
+        }
+    }
     compileSdkVersion 24
     buildToolsVersion '25.0.0'
     defaultConfig {
@@ -15,7 +26,6 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-
             Properties properties = new Properties()
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
             def clientId = properties.getProperty('client.id')
@@ -25,19 +35,19 @@ android {
         }
         debug {
             debuggable true
-
             Properties properties = new Properties()
             properties.load(project.rootProject.file('local.properties').newDataInputStream())
             def clientId = properties.getProperty('client.id')
             resValue "string", "client_id_string", clientId
             def mapsKey = properties.getProperty('maps.key')
             resValue "string", "google_maps_key_string", mapsKey
+            signingConfig signingConfigs.config
         }
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
@@ -49,7 +59,7 @@ dependencies {
     compile 'com.sothree.slidinguppanel:library:3.3.1'
     compile 'com.android.volley:volley:1.0.0'
     compile 'joda-time:joda-time:2.9.4'
-    compile ('io.socket:socket.io-client:0.8.1') {
+    compile('io.socket:socket.io-client:0.8.1') {
         // excluding org.json which is provided by Android
         exclude group: 'org.json', module: 'json'
     }
