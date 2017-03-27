@@ -9,6 +9,7 @@
 # header note.
 #Tue Nov 01 02:57:30 CET 2016
 sdk.dir=<SDK_LOCATION>
+keystore.path=<KEYSTORE_LOCATION>
 
 client.id=<CLIENT_ID>
 maps.key=<MAPS_API_KEY>
